@@ -18,27 +18,7 @@ Project showcasing FastAPI + Python backend, Next.js + TypeScript + Tailwind CSS
 ---
 
 ## Architecture
-
-```mermaid
-flowchart LR
-  subgraph Frontend
-    U[User Upload/Paste Dockerfile] -->|POST /upload| A[Upload Page]
-    A -->|display| E[Editor View (Monaco)]
-    E -->|"Optimize"| O[Optimize Button]
-    O -->|POST /optimize| B[FastAPI Backend]
-    B -->|optimized Dockerfile| E
-    E -->|"Download"| D[Download File]
-    E -->|"Chat"| C[Chat Panel]
-    C -->|send message| B
-    B -->|stream response| C
-  end
-
-  subgraph Backend
-    B[FastAPI] --> AI[OpenAI GPT-4]
-    B --> L[Lint Service]
-    B --> P[Layer Profiler]
-  end
-```
+![image](https://github.com/user-attachments/assets/c46e978c-aaa3-4765-b821-c544be03b00f)
 
 ---
 
