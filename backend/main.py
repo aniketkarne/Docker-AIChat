@@ -3,9 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import os
 import uuid
-import openai
+from openai import OpenAI
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
 # In-memory session store
 sessions = {}
@@ -76,7 +76,7 @@ def ai_optimize(dockerfile: str):
         "Optimize the following Dockerfile for minimal image size and best practices.\n\n"
         f"{dockerfile}"
     )
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[
             {"role": "system", "content": "You are a Dockerfile optimization assistant."},
@@ -97,7 +97,7 @@ def build_chat_prompt(raw: str, optimized: str, history: list, question: str) ->
     )
 
 async def ai_chat(prompt: str) -> str:
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-4",
         messages=[
             {"role": "system", "content": "You are a helpful assistant for Dockerfile optimization."},

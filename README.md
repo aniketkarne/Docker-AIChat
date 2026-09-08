@@ -40,13 +40,14 @@ Project showcasing FastAPI + Python backend, Next.js + TypeScript + Tailwind CSS
 
 1. Clone the repository  
    ```bash
-   git clone https://github.com/your-username/ai-docker-image-optimizer.git
-   cd ai-docker-image-optimizer
+   git clone https://github.com/aniketkarne/Docker-AIChat.git
+   cd Docker-AIChat
    ```
 
-2. Set OpenAI API key  
+2. Set your OpenAI API key  
    ```bash
-   export OPENAI_API_KEY="your_api_key_here"
+   cp .env.example .env
+   # then edit .env and replace the placeholder
    ```
 
 3. Development with Docker Compose  
@@ -81,11 +82,15 @@ Project showcasing FastAPI + Python backend, Next.js + TypeScript + Tailwind CSS
 ```
 .
 ├── README.md
+├── LICENSE
+├── .env.example
+├── .gitignore
 ├── docker-compose.yml
 ├── backend/
 │   ├── main.py
-│   ├── pyproject.toml
-│   └── Dockerfile
+│   ├── requirements.txt
+│   ├── Dockerfile
+│   └── .dockerignore
 └── frontend/
     ├── pages/
     │   ├── _app.tsx
@@ -96,12 +101,12 @@ Project showcasing FastAPI + Python backend, Next.js + TypeScript + Tailwind CSS
     ├── postcss.config.js
     ├── tsconfig.json
     ├── package.json
-    └── Dockerfile
+    ├── Dockerfile
+    └── .dockerignore
 ```
 
 ---
 
 ## License
 
-MIT License  
-© 2025 AniketKarne
+This project is licensed under the [MIT License](LICENSE).
