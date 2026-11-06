@@ -1,16 +1,16 @@
 # AI-Powered Docker Image Optimizer
 
 A full-stack application demonstrating AI-driven Dockerfile analysis and optimization.  
-Project showcasing FastAPI + Python backend, Next.js + TypeScript + Tailwind CSS frontend, OpenAI GPT-4 integration, and Docker Compose orchestration.
+Project showcasing FastAPI + Python backend, Next.js + TypeScript + Tailwind CSS frontend, OpenAI integration (GPT-6 Luna by default), and Docker Compose orchestration.
 
 ---
 
 ## Features
 
 - **Upload or Paste Dockerfile**: Simple UI to drop a file or paste Dockerfile text.
-- **Static Linting**: Identifies anti-patterns and best-practice violations.
-- **Layer Profiling**: Emulates BuildKit to report per-layer size breakdown.
-- **AI Optimization**: Submits the Dockerfile to OpenAI GPT-4 for size and best-practice improvements.
+- **Static Linting** *(placeholder)*: Endpoint and UI panel exist, but lint rules are not implemented yet — currently returns no findings.
+- **Layer Profiling** *(placeholder)*: Endpoint and UI panel exist, but BuildKit-based profiling is not implemented yet — currently returns no data.
+- **AI Optimization**: Submits the Dockerfile to OpenAI (default model `gpt-6-luna`, override with `OPENAI_MODEL`) for size and best-practice improvements.
 - **Optimized Diff & Download**: View optimized Dockerfile in Monaco Editor and download the result.
 - **In-Browser Chat**: Ephemeral session-based Q&A against your Dockerfile (no external database).
 - **Docker Compose**: One-command orchestration of backend and frontend services.
@@ -49,6 +49,8 @@ Project showcasing FastAPI + Python backend, Next.js + TypeScript + Tailwind CSS
    cp .env.example .env
    # then edit .env and replace the placeholder
    ```
+   Only the AI-backed endpoints (`/optimize`, `/suggestions`, `/chat`) need the key.
+   Optionally set `OPENAI_MODEL` to use a different OpenAI model (default: `gpt-6-luna`).
 
 3. Development with Docker Compose  
    ```bash
@@ -62,7 +64,7 @@ Project showcasing FastAPI + Python backend, Next.js + TypeScript + Tailwind CSS
    **Backend**  
    ```bash
    cd backend
-   poetry install
+   pip install -r requirements.txt
    uvicorn main:app --reload --host 0.0.0.0 --port 8000
    ```
 
@@ -82,16 +84,24 @@ Project showcasing FastAPI + Python backend, Next.js + TypeScript + Tailwind CSS
 ```
 .
 ├── README.md
+├── CHANGELOG.md
 ├── LICENSE
 ├── .env.example
 ├── .gitignore
 ├── docker-compose.yml
+├── .github/workflows/tests.yml
 ├── backend/
 │   ├── main.py
 │   ├── requirements.txt
+│   ├── requirements-dev.txt
 │   ├── Dockerfile
-│   └── .dockerignore
+│   ├── .dockerignore
+│   └── tests/
+│       ├── conftest.py
+│       └── test_api.py
 └── frontend/
+    ├── lib/
+    │   └── api.ts
     ├── pages/
     │   ├── _app.tsx
     │   └── index.tsx
@@ -104,6 +114,20 @@ Project showcasing FastAPI + Python backend, Next.js + TypeScript + Tailwind CSS
     ├── Dockerfile
     └── .dockerignore
 ```
+
+---
+
+## Tests
+
+Backend tests (no API key or network needed):
+
+```bash
+cd backend
+pip install -r requirements-dev.txt
+python -m pytest
+```
+
+CI runs the backend suite on Python 3.11/3.12 and a frontend production build on every push.
 
 ---
 

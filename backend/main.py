@@ -1,11 +1,16 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 
+import asyncio
 import os
 import uuid
 from openai import OpenAI
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+DEFAULT_MODEL = "gpt-6-luna"
+
+# Lazily constructed: the app must boot (and serve the keyless endpoints)
+# without OPENAI_API_KEY set. Only AI-backed endpoints need the key.
+_client = None
 
 # In-memory session store
 sessions = {}
@@ -19,6 +24,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+def get_client() -> OpenAI:
+    global _client
+    if _client is None:
+        api_key = os.getenv("OPENAI_API_KEY")
+        if not api_key:
+            raise HTTPException(
+                status_code=503,
+                detail="OPENAI_API_KEY is not set. AI-backed endpoints (/optimize, /suggestions, /chat) need it; /upload, /lint and /layers work without it.",
+            )
+        _client = OpenAI(api_key=api_key)
+    return _client
+
+
+def get_model() -> str:
+    return os.getenv("OPENAI_MODEL", DEFAULT_MODEL)
+
 
 @app.post("/upload")
 async def upload_dockerfile(file: UploadFile = File(...)):
@@ -55,9 +78,15 @@ async def suggestions(sessionID: str):
     """
     Return AI-driven optimization suggestions for the specified session's Dockerfile.
     """
-    raw = sessions.get(sessionID, {}).get("raw", "")
-    optimized = sessions.get(sessionID, {}).get("optimized", ai_optimize(raw))
-    suggestion_text = ai_optimize(raw)
+    session = sessions.get(sessionID)
+    if session is None:
+        raise HTTPException(status_code=404, detail="Unknown sessionID")
+    raw = session.get("raw", "")
+    if not raw.strip():
+        raise HTTPException(status_code=422, detail="Session has no Dockerfile content")
+    optimized = session.get("optimized") or await asyncio.to_thread(ai_optimize, raw)
+    session["optimized"] = optimized
+    suggestion_text = optimized
     suggestions = suggestion_text.splitlines()
     return {"suggestions": suggestions}
 
@@ -71,18 +100,20 @@ def layer_profiler(dockerfile: str):
     return []
 
 def ai_optimize(dockerfile: str):
-    # AI optimization via OpenAI GPT-4
+    # AI optimization via the OpenAI API. The model is configurable through
+    # OPENAI_MODEL (default: current-generation gpt-6-luna). No sampling
+    # parameters are sent: current reasoning models reject non-default
+    # temperature/top_p, and the prompt already states the objective.
     prompt = (
         "Optimize the following Dockerfile for minimal image size and best practices.\n\n"
         f"{dockerfile}"
     )
-    response = client.chat.completions.create(
-        model="gpt-4",
+    response = get_client().chat.completions.create(
+        model=get_model(),
         messages=[
             {"role": "system", "content": "You are a Dockerfile optimization assistant."},
             {"role": "user", "content": prompt}
         ],
-        temperature=0
     )
     return response.choices[0].message.content
 
@@ -97,12 +128,13 @@ def build_chat_prompt(raw: str, optimized: str, history: list, question: str) ->
     )
 
 async def ai_chat(prompt: str) -> str:
-    response = client.chat.completions.create(
-        model="gpt-4",
+    response = await asyncio.to_thread(
+        get_client().chat.completions.create,
+        model=get_model(),
         messages=[
             {"role": "system", "content": "You are a helpful assistant for Dockerfile optimization."},
             {"role": "user", "content": prompt}
-        ]
+        ],
     )
     return response.choices[0].message.content
 
@@ -111,12 +143,14 @@ async def optimize(payload: dict):
     """
     Optimize Dockerfile via lint, profiling, and AI.
     """
-    session_id = payload.get("sessionID") or str(uuid.uuid4())
     dockerfile_str = payload.get("dockerfile")
+    if not dockerfile_str or not dockerfile_str.strip():
+        raise HTTPException(status_code=422, detail="Missing 'dockerfile' in request body")
+    session_id = payload.get("sessionID") or str(uuid.uuid4())
     sessions[session_id] = {"raw": dockerfile_str}
     lint_results = lint_service(dockerfile_str)
     layer_report = layer_profiler(dockerfile_str)
-    optimized = ai_optimize(dockerfile_str)
+    optimized = await asyncio.to_thread(ai_optimize, dockerfile_str)
     sessions[session_id]["optimized"] = optimized
     return {
         "sessionID": session_id,
@@ -140,6 +174,7 @@ async def chat(payload: dict):
         session_data["raw"], session_data.get("optimized", session_data["raw"]), history, question
     )
     response = await ai_chat(prompt)
+    history.append({"role": "user", "content": question})
     history.append({"role": "assistant", "content": response})
     return {"response": response, "history": history}
 

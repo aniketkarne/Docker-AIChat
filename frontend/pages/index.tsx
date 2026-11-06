@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useState } from 'react'
-import axios from 'axios'
+import api from '../lib/api'
 import dynamic from 'next/dynamic'
 import { Bar } from 'react-chartjs-2'
 import 'chart.js/auto'
@@ -20,12 +20,12 @@ export default function Home() {
   const handleOptimize = async () => {
     const formData = new FormData()
     formData.append('file', new Blob([rawDockerfile], { type: 'text/plain' }), 'Dockerfile')
-    const uploadResp = await axios.post('/upload', formData, {
+    const uploadResp = await api.post('/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     })
     const sid = uploadResp.data.sessionID
     setSessionID(sid)
-    const optimizeResp = await axios.post('/optimize', {
+    const optimizeResp = await api.post('/optimize', {
       dockerfile: rawDockerfile,
       sessionID: sid
     })
@@ -44,7 +44,7 @@ export default function Home() {
 
   const sendChat = async () => {
     const payload = { sessionID, history: chatHistory, question: chatInput }
-    const resp = await axios.post('/chat', payload)
+    const resp = await api.post('/chat', payload)
     setChatHistory(resp.data.history)
     setChatInput('')
   }
