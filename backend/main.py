@@ -63,8 +63,9 @@ async def suggestions(sessionID: str):
 
 # Service implementations
 def lint_service(dockerfile: str):
-    # TODO: implement lint rules
-    return []
+    from docker_lint import format_findings, lint
+
+    return format_findings(lint(dockerfile))
 
 def layer_profiler(dockerfile: str):
     # TODO: implement BuildKit-based layer profiling
